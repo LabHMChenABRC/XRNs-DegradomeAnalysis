@@ -4,7 +4,8 @@
 Degradome signals density among mRNAs are calculated by Modified Guitar.Some functions of Guitar are modified from source code v2.10.0 by Bo-Han Hou
 
 ##### FLEP-Seq_polyAEnds.R  
-To find reads containing polyA and then assign ends to non-ref A site.
+To find reads containing polyA and then assign ends to non-ref A site.  
+Bam files in dataset/Bam_FLEP_seq only contain three genes("AT4G27440","AT1G12090","AT1G15690").
 
 ##### FLEP-Seq_PolyAsite-GenomeToTranscriptCoordinates.R  
 To correct position of published polyA sites and convert them from genome coordinates to transcript coordinates
