@@ -204,12 +204,13 @@ samplePoints.fast <- function(sitesGrangelists, stSampleNum = 5, stAmblguity = 5
                            }
                          })
     # build sitesPoints matrix based on unique sitesWidth
-    sitesPointsVector <- vector(mode = "numeric",length(sitesWidth))
-    sitesWidth.uni    <- sort(unique(sitesWidth))
+    sitesPointsVector <- vector(mode = "integer",length(sitesWidth))
+    sitesWidth.uni    <- matrix(sort(unique(sitesWidth)), ncol = 1)
     sitesWidth.idx    <- setNames(1:length(sitesWidth.uni), sitesWidth.uni)
-    sitesPoints.uni   <- t(vapply(sitesWidth.uni,Sample.fun,i=stSampleNum,FUN.VALUE = numeric(stSampleNum)))
+    sitesPoints.uni   <- matrix(data = apply(sitesWidth.uni, MARGIN = 1, FUN = Sample.fun, i=stSampleNum),
+                                ncol = stSampleNum, byrow = T)
     # Covert sitesWidth to sitesPointsVector
-    sitesPointsVector <- as.numeric(t(sitesPoints.uni[sitesWidth.idx[as.character(sitesWidth)],]))
+    sitesPointsVector <- t(sitesPoints.uni[sitesWidth.idx[as.character(sitesWidth)],])
     return(sitesPointsVector)
   }
   
@@ -390,8 +391,8 @@ add.mRNA.model <- function(feature.width,height,label=c("","5'UTR","CDS","3'UTR"
   )
 }
 
-### Other fuction ####
-# Subset Representative Models from GTF 
+### Other function ####
+# Subset representative models from GTF 
 makeRepresentativeModelsGTF <- function(input,output,RepresentativeForms){
   Model     <-import.gff(con = input)
   Model.rep <-Model[mcols(Model)$transcript_id %in% RepresentativeForms]
@@ -400,24 +401,22 @@ makeRepresentativeModelsGTF <- function(input,output,RepresentativeForms){
 
 # Alignments To 5P ends
 bedAlignemntTo5Pend <- function(file,MAPQ=NULL){
-  # input file is produced via bedtools bam2bed
-  # Unique hit with 255 MAPQ if STAR aligner is used to map.
-  if (requireNamespace('data.table')){
-    for (file.i in unlist(file)){
-      message("input:",file.i)
-      NewFile <- sub(".bed.gz$",".5P.bed.gz",file.i)
-      if (!file.exists(NewFile) ){
-        Ailgnments <- data.table::fread(file.i,sep="\t",header = FALSE)
-        if( !is.null(MAPQ)) {
-          Ailgnments<-Ailgnments[V5>=MAPQ] # filter by MAPQ
-        }
-        Ailgnments[V6=="+",V3:=V2+1]
-        Ailgnments[V6=="-",V2:=V3-1]
-        data.table::fwrite(Ailgnments,file=NewFile,sep="\t",col.names=F)
-        message("output:",NewFile) 
-      }else{
-        message(paste("Skip!","output file",NewFile, "is already existed.",sep=" ")) 
+  # input file was converted from bam format via bedtools bamtobed
+  # Unique hit is assigned 255 MAPQ if STAR aligner is used to map.
+  for (file.i in unlist(file)){
+    message("input:",file.i)
+    NewFile <- sub(".bed.gz$",".5P.bed.gz",file.i)
+    if (!file.exists(NewFile) ){
+      Ailgnments <- fread(file.i,sep="\t",header = FALSE)
+      if( !is.null(MAPQ)) {
+        Ailgnments<-Ailgnments[V5>=MAPQ] # filter by MAPQ
       }
+      Ailgnments[V6=="+",V3:=V2+1]
+      Ailgnments[V6=="-",V2:=V3-1]
+      fwrite(Ailgnments,file=NewFile,sep="\t",col.names=F)
+      message("output:",NewFile) 
+    }else{
+      message(paste("Skip!","output file",NewFile, "is already existed.",sep=" ")) 
     }
   }
 }
