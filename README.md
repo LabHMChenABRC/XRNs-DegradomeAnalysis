@@ -13,3 +13,6 @@ To correct position of published polyA sites and convert them from genome coordi
 ##### Reference files:  
 TAIR10_representative_gene_models.txt is download from TAIR10 database  
 TAIR10_GFF3_genes_transposons.gtf is coverted from TAIR10_GFF3_genes_transposons.gff by gffread.
+
+
+2022.12.01 written by Bo-Han Hou
