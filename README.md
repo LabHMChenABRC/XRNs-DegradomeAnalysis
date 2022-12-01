@@ -1,7 +1,7 @@
 ## XRNs-DegradomeAnalysis
 
 ##### GuitarPlotFast.R  
-Degradome signals density among mRNAs are calculated by Modified Guitar.Some functions of Guitar are modified from source code v2.10.0 by Bo-Han Hou
+Degradome signals density among mRNAs are calculated by Modified Guitar.Some functions of Guitar are modified from source code v2.10.0
 
 ##### FLEP-Seq_polyAEnds.R  
 To find reads containing polyA and then assign ends to non-ref A site.  
