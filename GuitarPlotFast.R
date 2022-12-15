@@ -2,7 +2,6 @@
 # Modify scripts to reduce RAM requirement & improve performance
 # Name of modified function end with ".fast"
 
-
 library(Guitar)
 library(data.table)
 library(ggplot2)
