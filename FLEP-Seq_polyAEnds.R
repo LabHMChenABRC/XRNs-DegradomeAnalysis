@@ -1,3 +1,4 @@
+# written by Bo-Han Hou
 library(data.table)
 library(GenomicFeatures)
 library(GenomicAlignments)
@@ -228,4 +229,3 @@ fwrite(x = WT.2_genome,file = "./FLEP-seq_polyAEnds/3Ends_polyARead_FLEP-seq_WT_
 polyA.info<-rbindlist( list("WT_rep1"=rbindlist(lapply(WT.1.info,function(x) x$polyA),idcol = "Transcript"),
                             "WT_rep2"=rbindlist(lapply(WT.2.info,function(x) x$polyA),idcol = "Transcript")),idcol = "Repeat")
 fwrite(polyA.info,file = "./FLEP-seq_polyAEnds/Target.polyA.qnames.tsv",sep="\t")
-
