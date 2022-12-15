@@ -2,7 +2,7 @@
 library(data.table)
 library(openxlsx)
 Chr2cDNA <- function(model,transcripts,positions){
-  # covert genomic coordinate to transcript coordinate
+  # Covert genomic coordinate to transcript coordinate
   # model file should contain transcript coordinate information
   model_exon <- copy(model[Type %in% c("exon","extended")])
   PosDT <- data.table(OriOrder=1:length(positions),"Transcript"=transcripts,"Position"=positions,"Position_dup"=positions)
@@ -14,6 +14,7 @@ Chr2cDNA <- function(model,transcripts,positions){
   Hits[Strand=="-",Position_cDNA:=Start-Position+End_cDNA]
   return(Hits$Position_cDNA)
 }
+
 sort_model<-function(x,strand){
   if(strand=="+"){
     return(x[order(End,Start,decreasing=FALSE),])
@@ -21,6 +22,7 @@ sort_model<-function(x,strand){
     return(x[order(Start,End,decreasing=TRUE),] )
   }
 }
+
 Get_Attribute <- function(Type,Attributes,AttName){
   switch(
     Type,
@@ -28,22 +30,23 @@ Get_Attribute <- function(Type,Attributes,AttName){
     GFF = sub(sprintf('.*%s=(.*?);.*',AttName),'\\1',Attributes)
   )
 }
+
 Fetch_GFF3 <- function(model.file,Representative_Genes_models){
   # Fetch gff file and give transcript coordinate information
-  GFF3   <-fread(model.file,header = FALSE,blank.lines.skip=TRUE,
-                 colClasses = c("character","character","character","numeric","numeric","character","character","character","character"),
-                 col.names = c("Ref","Source","Type","Start","End","Score","Strand","Phase","Attribute"))
-  mRNA   <-GFF3[grep("mRNA|transcript",Type,perl=TRUE)
-                ][,{Temp<-unlist(strsplit(Attribute,split = ";"));
-                .(Gene=sub("Parent=","",grep("Parent=",Temp,value=TRUE)),
-                  Transcript=sub("ID=","",grep("ID=",Temp,value=TRUE)))}][]
-  feature<-GFF3[grep("exon|CDS|five_prime_UTR|three_prime_UTR",Type,perl=TRUE,ignore.case = TRUE)
-                ][grep("exon",Type,ignore.case = TRUE),`:=`(Type="exon")
-                  ][grep("five_prime_UTR",Type,ignore.case = TRUE),Type:="UTR5"
-                    ][grep("three_prime_UTR",Type,ignore.case = TRUE),Type:="UTR3"
-                      ][,`:=`(Transcript=sub("Parent=","",grep("Parent=",unlist(strsplit(Attribute,split = ";")),value=TRUE)))]
+  GFF3   <- fread(model.file,header = FALSE,blank.lines.skip=TRUE,
+                  colClasses = c("character","character","character","numeric","numeric","character","character","character","character"),
+                  col.names = c("Ref","Source","Type","Start","End","Score","Strand","Phase","Attribute"))
+  mRNA   <- GFF3[grep("mRNA|transcript",Type,perl=TRUE)
+                 ][,{Temp<-unlist(strsplit(Attribute,split = ";"));
+                     .(Gene=sub("Parent=","",grep("Parent=",Temp,value=TRUE)),
+                       Transcript=sub("ID=","",grep("ID=",Temp,value=TRUE)))}][]
+  feature <- GFF3[grep("exon|CDS|five_prime_UTR|three_prime_UTR",Type,perl=TRUE,ignore.case = TRUE)
+                  ][grep("exon",Type,ignore.case = TRUE),`:=`(Type="exon")
+                    ][grep("five_prime_UTR",Type,ignore.case = TRUE),Type:="UTR5"
+                      ][grep("three_prime_UTR",Type,ignore.case = TRUE),Type:="UTR3"
+                        ][,`:=`(Transcript=sub("Parent=","",grep("Parent=",unlist(strsplit(Attribute,split = ";")),value=TRUE)))][]
   
-  # extend feature if it belong to multiple parents(transcripts)
+  # Extend sub-features if it belong to multiple parents(transcripts)
   if(feature[grep(",",Transcript),.N] > 0){
     feature <- feature[, strsplit(Transcript, ",") ,by = names(feature)
                        ][,Transcript:=NULL
@@ -55,34 +58,34 @@ Fetch_GFF3 <- function(model.file,Representative_Genes_models){
                   ][order(Ref,Gene,Transcript)
                     ][,.SD,.SDcols=c("Ref","Type","Start","End","Strand","Gene","Transcript")]
   
-  # Keep Representative gene model only
+  # Keep representative gene model only
   GFF3 <- GFF3[Transcript %in% Representative_Genes_models]
   
   # Assign transcript position
   # 1. add transcript coordinate to exon feature
-  GFF3.Exon<-GFF3[Type=="exon"
-                  ][,Len:=End-Start+1
-                    ][,End_cDNA:=cumsum(Len),by=.(Gene,Transcript)
-                      ][,Start_cDNA:=End_cDNA-Len+1
-                        ][,.SD,.SDcols=c("Ref","Type","Start","End","Strand","Gene","Transcript","Len","Start_cDNA","End_cDNA")]
+  GFF3.Exon <- GFF3[Type=="exon"
+                    ][,Len:=End-Start+1
+                      ][,End_cDNA:=cumsum(Len),by=.(Gene,Transcript)
+                        ][,Start_cDNA:=End_cDNA-Len+1
+                          ][,.SD,.SDcols=c("Ref","Type","Start","End","Strand","Gene","Transcript","Len","Start_cDNA","End_cDNA")]
   # 2. add transcript coordinate to non-exon features
-  GFF3.Features <-GFF3[Type!="exon"
-                       ][,Len:=End-Start+1
-                         ][Strand=="+",Start_cDNA:=Chr2cDNA(GFF3.Exon,Transcript,Start)
-                           ][Strand=="-",Start_cDNA:=Chr2cDNA(GFF3.Exon,Transcript,End)
-                             ][,End_cDNA:=Start_cDNA+Len-1]
+  GFF3.Features <- GFF3[Type!="exon"
+                        ][,Len:=End-Start+1
+                          ][Strand=="+",Start_cDNA:=Chr2cDNA(GFF3.Exon,Transcript,Start)
+                            ][Strand=="-",Start_cDNA:=Chr2cDNA(GFF3.Exon,Transcript,End)
+                              ][,End_cDNA:=Start_cDNA+Len-1]
   model <- rbind(GFF3.Exon,GFF3.Features)
   
   model <- model[order(Ref,Gene,Transcript,Start_cDNA,End_cDNA),
                  ][,`:=`(num=.N,order=1:.N),by=.(Transcript,Type)
                    ][,.SD,.SDcols=c("Ref","Type","Start","End","Strand","Gene","Transcript","Start_cDNA","End_cDNA","Len","num","order")]
   
-  extended.fw.exon <-model[Type=="exon"][num==order][Strand=="+"][,Type:="extended"]
-  extended.rc.exon <-model[Type=="exon"][num==order][Strand=="-"][,Type:="extended"]
+  extended.fw.exon <- model[Type=="exon"][num==order][Strand=="+"][,Type:="extended"]
+  extended.rc.exon <- model[Type=="exon"][num==order][Strand=="-"][,Type:="extended"]
   extended.fw.exon[,`:=`(Start=End+1,Start_cDNA=End_cDNA+1,order=order+1)][,`:=`(End=Start+999,End_cDNA=Start_cDNA+999)][,Len:=End-Start+1]
   extended.rc.exon[,`:=`(End=Start-1,Start_cDNA=End_cDNA+1,order=order+1)][,`:=`(Start=End-999,End_cDNA=Start_cDNA+999)][,Len:=End-Start+1]
   
-  model<-rbind(model,extended.fw.exon,extended.rc.exon)[order(Ref,Gene,Transcript,order)]
+  model <- rbind(model,extended.fw.exon,extended.rc.exon)[order(Ref,Gene,Transcript,order)]
   
   model[Type=="exon",TxLen:=sum(Len),by=.(Transcript)]
   return(model)
@@ -98,9 +101,9 @@ Representative_Genes_models <- fread(file = RepGene.file,
                                      header = FALSE,
                                      col.names = "ID",
                                      skip = "AT")[grep("AT\\d+",ID)]$ID
-Gene2Representative <- setNames(Representative_Genes_models,sub(".\\d+$","",Representative_Genes_models))
-
+# Fetch model information
 model.dt <- Fetch_GFF3(model.file = GFF.file, Representative_Genes_models = Representative_Genes_models)
+
 # Representative coding genes list
 Coding.genes <- model.dt[Type=="CDS",unique(Transcript)]
 
@@ -112,7 +115,7 @@ PolyA.dt <- PolyA.dt[,.SD,.SDcols=c(1,3,6)][,setnames(.SD,c("Gene","Strand","Pol
 # plus 1 nt to poly A site of genes which are located in (-) strand.
 PolyA.dt <- PolyA.dt[Strand == '-',PolyAsite:=PolyAsite+1][]
 
-# Mo etal defined PolyA sites have 1-nt shifting between the (+) strand and the (-) strand.
+# Mo et al. defined PolyA sites have 1-nt shifting between the (+) strand and the (-) strand.
 # for example:
 # gene is located on the strand "+"
 # NNNNNNNNNNNNNNNNAAANNNNNNNNNNNNNNNNNNNN Genome
@@ -133,8 +136,10 @@ PolyA.dt <- PolyA.dt[Strand == '-',PolyAsite:=PolyAsite+1][]
 #                  ploy A site. The position is "1-nt" downstream of 3' end of alignment
 
 
-# add representative transcript ID to keep coding genes only
-PolyA.dt <- PolyA.dt[,Transcript:=Gene2Representative[Gene]][][,.SD,.SDcols=c("Gene", "Strand", "Transcript", "PolyAsite")][Transcript %in% Coding.genes]
+# Add representative transcript ID to keep coding genes only
+Gene2Representative <- setNames(Representative_Genes_models,sub(".\\d+$","",Representative_Genes_models))
+PolyA.dt <- PolyA.dt[,Transcript:=Gene2Representative[Gene]][,.SD,.SDcols=c("Gene", "Strand", "Transcript", "PolyAsite")][Transcript %in% Coding.genes]
+
 # covert genomic coordinate to transcript coordinate
 PolyA.dt <- PolyA.dt[,PolyAsite.cDNA:=Chr2cDNA(model = model.dt[Type %in% c("exon","extended")][Gene %in% PolyA.dt$Gene],
                                                transcripts = Transcript,
