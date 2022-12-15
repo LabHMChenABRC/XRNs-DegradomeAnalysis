@@ -5,7 +5,7 @@ Degradome signals density among mRNAs are calculated by Modified Guitar. Some fu
 
 #### FLEP-Seq_polyAEnds.R  
 To find poly-A reads of FLEP-Seq and the peaks are counted at 3' ends of alignments.  
-The peak move to upstream frist non-A position if peak is located A base.  
+The peaks are moved upstream to the first non-A position if the peak is located at A base.  
 Bam files in dataset/Bam_FLEP_seq only contain three genes("AT4G27440","AT1G12090","AT1G15690").  
 
 #### FLEP-Seq_PolyAsite-GenomeToTranscriptCoordinates.R  
